@@ -1,0 +1,23 @@
+services:
+  runner:
+    build:
+      dockerfile_inline: |
+        FROM golang:1.23-alpine AS builder
+        
+        WORKDIR /build
+
+        COPY go.mod go.sum .
+        RUN go mod download
+
+        COPY . .
+        RUN go build ./cmd/fleeting-plugin-cloudscale
+
+        FROM gitlab/gitlab-runner:latest
+
+        COPY --from=builder /build/fleeting-plugin-cloudscale /bin/fleeting-plugin-cloudscale
+    develop:
+      watch:
+        - action: rebuild
+          path: .
+    volumes:
+      - "./hack:/etc/gitlab-runner"
