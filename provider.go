@@ -80,7 +80,7 @@ func (g *InstanceGroup) serverName() string {
 	return fmt.Sprintf("%s-%s", g.Name, uuid.NewString())
 }
 
-// Init implements provider.InstanceGroup.
+// Init initializes the ProviderInfo struct
 func (g *InstanceGroup) Init(ctx context.Context, logger hclog.Logger, settings provider.Settings) (info provider.ProviderInfo, err error) {
 	g.settings = settings
 	g.log = logger.Named("fleeting-plugin-cloudscale")
@@ -123,7 +123,8 @@ func (g *InstanceGroup) Init(ctx context.Context, logger hclog.Logger, settings 
 	}, nil
 }
 
-// Update implements provider.InstanceGroup.
+// Update updates instance data from the instance group, passing a function
+// to perform instance reconciliation.
 func (g *InstanceGroup) Update(ctx context.Context, update func(instance string, state provider.State)) error {
 	servers, err := g.client.Servers.List(ctx, cloudscale.WithTagFilter(g.tagMap()))
 	if err != nil {
@@ -151,7 +152,8 @@ func (g *InstanceGroup) Update(ctx context.Context, update func(instance string,
 	return nil
 }
 
-// Increase implements provider.InstanceGroup.
+// Increase requests more instances to be created. It returns how many
+// instances were successfully requested.
 func (g *InstanceGroup) Increase(ctx context.Context, delta int) (succeeded int, err error) {
 	servers := make([]*cloudscale.Server, 0, delta)
 	errs := make([]error, 0)
@@ -197,7 +199,8 @@ func (g *InstanceGroup) Increase(ctx context.Context, delta int) (succeeded int,
 
 }
 
-// Decrease implements provider.InstanceGroup.
+// Decrease removes the specified instances from the instance group. It
+// returns instance IDs of successful requests for removal.
 func (g *InstanceGroup) Decrease(ctx context.Context, ids []string) (succeeded []string, err error) {
 	errs := make([]error, 0)
 
@@ -213,7 +216,8 @@ func (g *InstanceGroup) Decrease(ctx context.Context, ids []string) (succeeded [
 	return succeeded, errors.Join(errs...)
 }
 
-// ConnectInfo implements provider.InstanceGroup.
+// ConnectInfo returns additional information about an instance,
+// useful for creating a connection.
 func (g *InstanceGroup) ConnectInfo(ctx context.Context, instance string) (provider.ConnectInfo, error) {
 	info := provider.ConnectInfo{ConnectorConfig: g.settings.ConnectorConfig}
 
@@ -240,7 +244,7 @@ func (g *InstanceGroup) ConnectInfo(ctx context.Context, instance string) (provi
 	return info, nil
 }
 
-// Shutdown implements provider.InstanceGroup.
+// Shutdown performs any cleanup tasks required when the plugin is to shutdown.
 func (g *InstanceGroup) Shutdown(ctx context.Context) error {
 	// No cleanup needed,
 	// as we do not need to upload any keys before creating a server.
