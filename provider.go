@@ -79,7 +79,7 @@ func (g *InstanceGroup) serverName() string {
 // Init implements provider.InstanceGroup.
 func (g *InstanceGroup) Init(ctx context.Context, logger hclog.Logger, settings provider.Settings) (info provider.ProviderInfo, err error) {
 	g.settings = settings
-	g.log = logger
+	g.log = logger.Named("fleeting-plugin-cloudscale")
 
 	if err := g.validate(); err != nil {
 		return provider.ProviderInfo{}, err
