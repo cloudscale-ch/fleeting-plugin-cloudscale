@@ -1,4 +1,5 @@
-hack/.runner_system_id
-hack/config.toml
+config/.runner_system_id
+config/config.toml
+
 # Added by goreleaser init:
 dist/

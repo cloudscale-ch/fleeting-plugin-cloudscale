@@ -1,0 +1,119 @@
+# Example configuration of a gitlab-runner with fleeting-plugin-cloudscale
+#
+# Such a GitLab runner can be registered on $GITLAB_URL/admin/runners, via
+# "New Instance Runner", and it will show up as a single runner. The runner
+# itself will not execute any jobs. Instead it will delegate those to
+# dynamically spawned VMs with Docker support.
+
+# The number of total concurrent jobs processed by this runner. Should be
+# set to max_instances * capacity_per_instance.
+concurrent = 40
+
+[[runners]]
+  # The name of the runner that manages the autoscaled VMs.
+  name = "cloudscale-docker-autoscaler"
+
+  # The HTTPS URL to your GitLab instance.
+  url = "$GITLAB_URL"
+
+  # The token provided by GitLab when creating a "New Instance Runner" under
+  # $GITLAB_URL/admin/runners.
+  token = "$RUNNER_TOKEN"
+
+  # The executor that operates the VMs via fleeting-plugin-cloudscale.
+  executor = "docker-autoscaler"
+
+[runners.docker]
+
+  # The image to run jobs with. For more settings see
+  # https://docs.gitlab.com/runner/configuration/advanced-configuration/#the-runnersdocker-section
+  image = "alpine:latest"
+
+[runners.autoscaler]
+
+  # The plugin to use (Docker image). Note: For testing with docker compose
+  # you want to use the following instead:
+  # plugin = "fleeting-plugin-cloudscale"
+  plugin = "quay.io/cloudscalech/fleeting-plugin-cloudscale:latest"
+
+  # Wether instances should be removed when the controlling runner is stopped
+  delete_instances_on_shutdown = true
+
+  # The command used to check if the VM is ready. By default, we check if
+  # cloud-init has completed successfully (if it is present).
+  instance_ready_command = "command -v cloud-init || exit 0; cloud-init status --wait; test $? -ne 1"
+
+  # Jobs per instance
+  capacity_per_instance = 4
+
+  # Maximum number of instances
+  max_instances = 10
+
+  # How many jobs are run, before a runner is recycled
+  max_use_count = 1024
+
+[runners.autoscaler.connector_config]
+
+  # Use the public IP address provided by the plugin
+  use_external_addr = true
+
+  # For custom images: The username used to connect to the image. Not necessary
+  # for official images.
+  #
+  # Hint: Custom images have the advantage that they can be prebuilt with
+  # Docker, and as such may be able to start quicker than official images
+  # using cloud-init to install Docker after booting.
+  #
+  # username = "ubuntu"
+
+[runners.autoscaler.plugin_config]
+
+  # The name of the scheduling group. You should use a unique name for each
+  # runner that manages a set of VMs.
+  name = "fleeting-instance"
+
+  # The cloudscale.ch API token with write permissions.
+  api_token = "$CLOUDSCALE_API_TOKEN"
+
+  # The zone in which to launch instances.
+  zone = "lpg1"
+
+  # The flavor used for each instance.
+  flavor = "flex-4-4"
+
+  # The image used for each instance.
+  image = "ubuntu-24.04"
+
+  # The root disk size of each instance.
+  volume_size_gb = 25
+
+  # The cloud-config applied to each instance. Note that GitLab expects these
+  # instances to have a running docker daemon.
+  user_data = """#cloud-config
+  apt:
+    sources:
+      docker.list:
+        source: deb https://download.docker.com/linux/ubuntu $RELEASE stable
+        keyid: 9DC858229FC7DD38854AE2D88D81803C0EBFCD88
+
+  packages:
+    - docker-ce
+    - docker-ce-cli
+    - containerd.io
+    - docker-buildx-plugin
+
+  system_info:
+    default_user:
+      groups: [docker]
+  """
+
+# The scheduling policies in place (multiple are possible). See:
+# https://docs.gitlab.com/runner/configuration/advanced-configuration/#the-runnersautoscalerpolicy-sections
+[[runners.autoscaler.policy]]
+  periods = ["* * * * *"]
+
+  # The job capacity that should always be available
+  idle_count = 1
+
+  # How long an instance can remain idle, before it is killed
+  idle_time = "1m"

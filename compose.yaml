@@ -20,4 +20,4 @@ services:
         - action: rebuild
           path: .
     volumes:
-      - "./hack:/etc/gitlab-runner"
+      - "./config:/etc/gitlab-runner"

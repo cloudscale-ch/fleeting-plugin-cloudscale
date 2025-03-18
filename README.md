@@ -34,17 +34,17 @@ To test the plugin locally, you can use the provided `compose.yml`.
 ### Setup
 
 1. **Create a custom configuration file**
-   A template configuration is available in the `/hack` directory.
+   A template configuration is available in the `/config` directory.
    Copy and modify it to match your environment:
 
    ```sh
-   cp ./hack/config.toml.template ./hack/config.toml
+   cp ./config/config.toml.template ./config/config.toml
    ```
 
    Note: The configuration template configures a "docker-autoscaler".
 
 2. **Update the configuration**
-   Edit ./hack/config.toml and set the following variables:
+   Edit ./config/config.toml and set the following variables:
 
    - `$GITLAB_URL` - Your GitLab instance URL.
    - `$RUNNER_TOKEN` - Your GitLab runner registration token.
@@ -59,3 +59,9 @@ docker compose up --watch
 ```
 
 This will launch the runner with automatic rebuilds on changes.
+
+Note that you need to change the `plugin` in `config/config.toml` to the following:
+
+```toml
+plugin = "fleeting-plugin-cloudscale"
+```
