@@ -1,6 +1,7 @@
 package cloudscale
 
 import (
+	"bytes"
 	"context"
 	"crypto"
 	"crypto/ed25519"
@@ -61,7 +62,12 @@ func (g *InstanceGroup) publicKey() ([]byte, error) {
 		return nil, fmt.Errorf("generating ssh public key: %w", err)
 	}
 
-	return ssh.MarshalAuthorizedKey(sshPubKey), nil
+	// Generate the authorizd key, together with a note that it came
+	// from this plugin.
+	marshaled := ssh.MarshalAuthorizedKey(sshPubKey)
+	marshaled = bytes.TrimSuffix(marshaled, []byte("\n"))
+
+	return append(marshaled, []byte(" fleeting-plugin-cloudscale\n")...), nil
 }
 
 func (g *InstanceGroup) tagMap() cloudscaleclient.TagMap {
