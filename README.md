@@ -22,8 +22,10 @@ The following parameters are supported:
 | ------------------------ | --------------------------------- |
 | `os`                     | `linux`                           |
 | `protocol`               | `ssh` **(only ssh is supported)** |
-| `username`               | `root`                            |
+| `username`               | `root` for custom images          |
 | `use_static_credentials` | `false`                           |
+
+Note: The `username` can be left empty when using an official image (from `/v1/images`). When using a custom image, the user defaults to `root` and should likely be configured explicitly.
 
 ## Development
 

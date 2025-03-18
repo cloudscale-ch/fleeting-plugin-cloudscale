@@ -219,7 +219,11 @@ func (g *InstanceGroup) ConnectInfo(ctx context.Context, instance string) (provi
 	// cloudscale.ch only supports amd64
 	info.Arch = "amd64"
 
-	info.Username = g.settings.Username
+	if server.Image.DefaultUsername != "" {
+		info.Username = server.Image.DefaultUsername
+	} else {
+		info.Username = g.settings.Username
+	}
 
 	info.Key = g.settings.Key
 	info.ExternalAddr = server.Interfaces[0].Addresses[0].Address // Only public address is supported at the moment.
