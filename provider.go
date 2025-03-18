@@ -181,6 +181,15 @@ func (g *InstanceGroup) Increase(ctx context.Context, delta int) (succeeded int,
 			errs = append(errs, err)
 			continue
 		}
+
+		server, err = g.client.Servers.WaitFor(
+			ctx, server.UUID, cloudscale.ServerIsRunning)
+
+		if err != nil {
+			errs = append(errs, err)
+			continue
+		}
+
 		servers = append(servers, server)
 	}
 
