@@ -35,8 +35,6 @@ type InstanceGroup struct {
 	log      hclog.Logger
 	settings provider.Settings
 
-	size int
-
 	client *cloudscaleclient.Client
 }
 
@@ -126,8 +124,6 @@ func (g *InstanceGroup) Update(ctx context.Context, update func(instance string,
 		return err
 	}
 
-	g.size = len(servers)
-
 	for _, server := range servers {
 		id := server.UUID
 		var state provider.State
@@ -182,7 +178,6 @@ func (g *InstanceGroup) Increase(ctx context.Context, delta int) (succeeded int,
 		servers = append(servers, server)
 	}
 
-	g.size += len(servers)
 	return len(servers), errors.Join(errs...)
 
 }
