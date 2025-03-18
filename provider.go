@@ -5,6 +5,7 @@ import (
 	"context"
 	"crypto"
 	"crypto/ed25519"
+	"crypto/rand"
 	"encoding/pem"
 	"errors"
 	"fmt"
@@ -12,9 +13,9 @@ import (
 	"net/http"
 	"path"
 	"regexp"
+	"strings"
 
 	cloudscale "github.com/cloudscale-ch/cloudscale-go-sdk/v5"
-	"github.com/google/uuid"
 	hclog "github.com/hashicorp/go-hclog"
 	"gitlab.com/gitlab-org/fleeting/fleeting/provider"
 	"golang.org/x/crypto/ssh"
@@ -81,7 +82,7 @@ func (g *InstanceGroup) tagMap() cloudscale.TagMap {
 }
 
 func (g *InstanceGroup) serverName() string {
-	return fmt.Sprintf("%s-%s", g.Group, uuid.NewString())
+	return fmt.Sprintf("%s-%s", g.Group, strings.ToLower(rand.Text()[:10]))
 }
 
 func (g *InstanceGroup) validate() error {
