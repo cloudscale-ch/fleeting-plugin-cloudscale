@@ -89,23 +89,26 @@ func (g *InstanceGroup) Init(ctx context.Context, logger hclog.Logger, settings 
 	g.client.AuthToken = g.ApiToken
 
 	if g.settings.Key == nil {
-		g.log.Info("generating SSH key pair")
+		g.log.Info("generating SSH private key")
 
 		_, priv, err := ed25519.GenerateKey(nil)
 		if err != nil {
-			return provider.ProviderInfo{}, fmt.Errorf("generating ssh key pair: %w", err)
+			return provider.ProviderInfo{},
+				fmt.Errorf("failed to generate SSH private key: %w", err)
 		}
 
 		privPem, err := ssh.MarshalPrivateKey(priv, "")
 		if err != nil {
-			return provider.ProviderInfo{}, err
+			return provider.ProviderInfo{},
+				fmt.Errorf("failed to marshal SSH private key: %w", err)
 		}
 
 		g.settings.Key = pem.EncodeToMemory(privPem)
 	}
 
 	if _, err := g.client.Servers.List(ctx); err != nil {
-		return provider.ProviderInfo{}, fmt.Errorf("creating client: %w", err)
+		return provider.ProviderInfo{},
+			fmt.Errorf("failed to initialize client: %w", err)
 	}
 
 	return provider.ProviderInfo{
