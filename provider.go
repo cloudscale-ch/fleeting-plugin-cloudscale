@@ -22,7 +22,7 @@ import (
 var _ provider.InstanceGroup = (*InstanceGroup)(nil)
 
 type InstanceGroup struct {
-	Name string `json:"name"`
+	Group string `json:"group"`
 
 	ApiToken string `json:"api_token"`
 
@@ -72,19 +72,19 @@ func (g *InstanceGroup) publicKey() ([]byte, error) {
 
 func (g *InstanceGroup) tagMap() cloudscale.TagMap {
 	return cloudscale.TagMap{
-		"fleeting-instance-group": g.Name,
+		"fleeting-instance-group": g.Group,
 	}
 }
 
 func (g *InstanceGroup) serverName() string {
-	return fmt.Sprintf("%s-%s", g.Name, uuid.NewString())
+	return fmt.Sprintf("%s-%s", g.Group, uuid.NewString())
 }
 
 // Init initializes the ProviderInfo struct
 func (g *InstanceGroup) Init(ctx context.Context, logger hclog.Logger, settings provider.Settings) (info provider.ProviderInfo, err error) {
 	g.settings = settings
 	g.log = logger.Named("fleeting-plugin-cloudscale").With(
-		"name", g.Name,
+		"group", g.Group,
 		"zone", g.Zone)
 
 	if err := g.validate(); err != nil {

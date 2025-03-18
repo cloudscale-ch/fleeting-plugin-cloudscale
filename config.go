@@ -25,8 +25,8 @@ func (g *InstanceGroup) validate() error {
 		errs = append(errs, fmt.Errorf("missing required plugin config: api_token"))
 	}
 
-	if g.Name == "" {
-		errs = append(errs, fmt.Errorf("missing required plugin config: name"))
+	if g.Group == "" {
+		errs = append(errs, fmt.Errorf("missing required plugin config: group"))
 	}
 
 	if g.Zone != "" && (g.Zone != "rma1" && g.Zone != "lpg1") {
