@@ -83,7 +83,9 @@ func (g *InstanceGroup) serverName() string {
 // Init initializes the ProviderInfo struct
 func (g *InstanceGroup) Init(ctx context.Context, logger hclog.Logger, settings provider.Settings) (info provider.ProviderInfo, err error) {
 	g.settings = settings
-	g.log = logger.Named("fleeting-plugin-cloudscale")
+	g.log = logger.Named("fleeting-plugin-cloudscale").With(
+		"name", g.Name,
+		"zone", g.Zone)
 
 	if err := g.validate(); err != nil {
 		return provider.ProviderInfo{}, err
@@ -166,8 +168,11 @@ func (g *InstanceGroup) Increase(ctx context.Context, delta int) (succeeded int,
 	tagMap := g.tagMap()
 
 	for i := 0; i < delta; i++ {
+		serverName := g.serverName()
+
+		g.log.Info("creating server", "name", serverName, "flavor", g.Flavor)
 		server, err := g.client.Servers.Create(ctx, &cloudscale.ServerRequest{
-			Name:         g.serverName(),
+			Name:         serverName,
 			Zone:         g.Zone,
 			Flavor:       g.Flavor,
 			Image:        g.Image,
@@ -180,7 +185,8 @@ func (g *InstanceGroup) Increase(ctx context.Context, delta int) (succeeded int,
 		})
 
 		if err != nil {
-			errs = append(errs, err)
+			errs = append(errs, fmt.Errorf(
+				"failed to create %s: %w", serverName, err))
 			continue
 		}
 
@@ -188,10 +194,12 @@ func (g *InstanceGroup) Increase(ctx context.Context, delta int) (succeeded int,
 			ctx, server.UUID, cloudscale.ServerIsRunning)
 
 		if err != nil {
-			errs = append(errs, err)
+			errs = append(errs, fmt.Errorf(
+				"failed to wait for %s: %w", serverName, err))
 			continue
 		}
 
+		g.log.Info("created server", "name", serverName, "uuid", server.UUID)
 		servers = append(servers, server)
 	}
 
@@ -205,9 +213,12 @@ func (g *InstanceGroup) Decrease(ctx context.Context, ids []string) (succeeded [
 	errs := make([]error, 0)
 
 	for _, id := range ids {
+		g.log.Info("deleting server", "uuid", id)
+
 		err := g.client.Servers.Delete(ctx, id)
 		if err != nil {
-			errs = append(errs, err)
+			errs = append(errs, fmt.Errorf(
+				"failed to delete server %s: %w", id, err))
 			continue
 		}
 		succeeded = append(succeeded, id)
@@ -218,12 +229,12 @@ func (g *InstanceGroup) Decrease(ctx context.Context, ids []string) (succeeded [
 
 // ConnectInfo returns additional information about an instance,
 // useful for creating a connection.
-func (g *InstanceGroup) ConnectInfo(ctx context.Context, instance string) (provider.ConnectInfo, error) {
+func (g *InstanceGroup) ConnectInfo(ctx context.Context, id string) (provider.ConnectInfo, error) {
 	info := provider.ConnectInfo{ConnectorConfig: g.settings.ConnectorConfig}
 
-	server, err := g.client.Servers.Get(ctx, instance)
+	server, err := g.client.Servers.Get(ctx, id)
 	if err != nil {
-		return info, fmt.Errorf("unable to fetch server: %w", err)
+		return info, fmt.Errorf("unable to fetch server %s: %w", id, err)
 	}
 
 	info.ID = server.UUID
