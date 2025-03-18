@@ -12,7 +12,7 @@ import (
 	"net/http"
 	"path"
 
-	cloudscaleclient "github.com/cloudscale-ch/cloudscale-go-sdk/v5"
+	cloudscale "github.com/cloudscale-ch/cloudscale-go-sdk/v5"
 	"github.com/google/uuid"
 	hclog "github.com/hashicorp/go-hclog"
 	"gitlab.com/gitlab-org/fleeting/fleeting/provider"
@@ -36,7 +36,7 @@ type InstanceGroup struct {
 	log      hclog.Logger
 	settings provider.Settings
 
-	client *cloudscaleclient.Client
+	client *cloudscale.Client
 }
 
 func (g *InstanceGroup) publicKey() ([]byte, error) {
@@ -70,8 +70,8 @@ func (g *InstanceGroup) publicKey() ([]byte, error) {
 	return append(marshaled, []byte(" fleeting-plugin-cloudscale\n")...), nil
 }
 
-func (g *InstanceGroup) tagMap() cloudscaleclient.TagMap {
-	return cloudscaleclient.TagMap{
+func (g *InstanceGroup) tagMap() cloudscale.TagMap {
+	return cloudscale.TagMap{
 		"fleeting-instance-group": g.Name,
 	}
 }
@@ -89,7 +89,7 @@ func (g *InstanceGroup) Init(ctx context.Context, logger hclog.Logger, settings 
 		return provider.ProviderInfo{}, err
 	}
 
-	g.client = cloudscaleclient.NewClient(http.DefaultClient)
+	g.client = cloudscale.NewClient(http.DefaultClient)
 	g.client.AuthToken = g.ApiToken
 
 	if g.settings.Key == nil {
@@ -125,7 +125,7 @@ func (g *InstanceGroup) Init(ctx context.Context, logger hclog.Logger, settings 
 
 // Update implements provider.InstanceGroup.
 func (g *InstanceGroup) Update(ctx context.Context, update func(instance string, state provider.State)) error {
-	servers, err := g.client.Servers.List(ctx, cloudscaleclient.WithTagFilter(g.tagMap()))
+	servers, err := g.client.Servers.List(ctx, cloudscale.WithTagFilter(g.tagMap()))
 	if err != nil {
 		return err
 	}
@@ -135,9 +135,9 @@ func (g *InstanceGroup) Update(ctx context.Context, update func(instance string,
 		var state provider.State
 
 		switch server.Status {
-		case string(cloudscaleclient.ServerStopped):
+		case string(cloudscale.ServerStopped):
 			state = provider.StateDeleted
-		case string(cloudscaleclient.ServerRunning):
+		case string(cloudscale.ServerRunning):
 			state = provider.StateRunning
 		case "changing":
 			state = provider.StateCreating
@@ -153,7 +153,7 @@ func (g *InstanceGroup) Update(ctx context.Context, update func(instance string,
 
 // Increase implements provider.InstanceGroup.
 func (g *InstanceGroup) Increase(ctx context.Context, delta int) (succeeded int, err error) {
-	servers := make([]*cloudscaleclient.Server, 0, delta)
+	servers := make([]*cloudscale.Server, 0, delta)
 	errs := make([]error, 0)
 
 	publicKey, err := g.publicKey()
@@ -164,7 +164,7 @@ func (g *InstanceGroup) Increase(ctx context.Context, delta int) (succeeded int,
 	tagMap := g.tagMap()
 
 	for i := 0; i < delta; i++ {
-		server, err := g.client.Servers.Create(ctx, &cloudscaleclient.ServerRequest{
+		server, err := g.client.Servers.Create(ctx, &cloudscale.ServerRequest{
 			Name:         g.serverName(),
 			Zone:         g.Zone,
 			Flavor:       g.Flavor,
@@ -172,7 +172,7 @@ func (g *InstanceGroup) Increase(ctx context.Context, delta int) (succeeded int,
 			SSHKeys:      []string{string(publicKey)},
 			VolumeSizeGB: g.VolumeSizeGB,
 			UserData:     g.UserData,
-			TaggedResourceRequest: cloudscaleclient.TaggedResourceRequest{
+			TaggedResourceRequest: cloudscale.TaggedResourceRequest{
 				Tags: &tagMap,
 			},
 		})
