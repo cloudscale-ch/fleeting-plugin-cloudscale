@@ -11,6 +11,7 @@ import (
 	"math"
 	"net/http"
 	"path"
+	"regexp"
 
 	cloudscale "github.com/cloudscale-ch/cloudscale-go-sdk/v5"
 	"github.com/google/uuid"
@@ -18,6 +19,9 @@ import (
 	"gitlab.com/gitlab-org/fleeting/fleeting/provider"
 	"golang.org/x/crypto/ssh"
 )
+
+var validGroupName *regexp.Regexp = regexp.MustCompile(
+	"^[a-zA-Z]{1}[a-zA-Z0-9_.-]*$")
 
 var _ provider.InstanceGroup = (*InstanceGroup)(nil)
 
@@ -80,6 +84,49 @@ func (g *InstanceGroup) serverName() string {
 	return fmt.Sprintf("%s-%s", g.Group, uuid.NewString())
 }
 
+func (g *InstanceGroup) validate() error {
+	var errs []error
+
+	err := func(format string, a ...any) {
+		errs = append(errs, fmt.Errorf(format, a...))
+	}
+
+	requiredFields := map[string]string{
+		"api_token": g.ApiToken,
+		"group":     g.Group,
+		"flavor":    g.Flavor,
+		"image":     g.Image,
+	}
+
+	for field, value := range requiredFields {
+		if value == "" {
+			err("plugin_config: %s: required field missing", field)
+		}
+	}
+
+	if !validGroupName.MatchString(g.Group) {
+		err("plugin_config: group name must match %s", validGroupName)
+	}
+
+	if g.Zone != "" && g.Zone != "rma1" && g.Zone != "lpg1" {
+		err("plugin_config: zone %s should be rma1 or lpg1", g.Zone)
+	}
+
+	if g.VolumeSizeGB < 10 {
+		err("plugin_config: volume_size_gb must be >= 10")
+	}
+
+	if g.settings.Protocol != provider.ProtocolSSH {
+		err("connector_config: %s is not supported", g.settings.Protocol)
+	}
+
+	if g.settings.UseStaticCredentials && g.settings.Key == nil {
+		err("connector_config: use_static_credentials enabled but no key set")
+	}
+
+	return errors.Join(errs...)
+}
+
 // Init initializes the ProviderInfo struct
 func (g *InstanceGroup) Init(ctx context.Context, logger hclog.Logger, settings provider.Settings) (info provider.ProviderInfo, err error) {
 	g.settings = settings
@@ -87,8 +134,19 @@ func (g *InstanceGroup) Init(ctx context.Context, logger hclog.Logger, settings 
 		"group", g.Group,
 		"zone", g.Zone)
 
+	// Default settings
+	if g.settings.Protocol == "" {
+		g.settings.Protocol = provider.ProtocolSSH
+	}
+
+	if g.settings.Username == "" {
+		g.settings.Username = "root"
+	}
+
+	// Validate config
 	if err := g.validate(); err != nil {
-		return provider.ProviderInfo{}, err
+		return provider.ProviderInfo{}, fmt.Errorf(
+			"config validation: %w", err)
 	}
 
 	g.client = cloudscale.NewClient(http.DefaultClient)
