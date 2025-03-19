@@ -19,6 +19,14 @@ builds:
     binary: "{{ .Os }}/{{ .Arch }}/plugin"
     no_unique_dist_dir: true
 
+    # Configure the linker flags required for version information
+    ldflags:
+      - -s -w
+      - -X github.com/cloudscale-ch/fleeting-plugin-cloudscale.VERSION={{.Version}}
+      - -X github.com/cloudscale-ch/fleeting-plugin-cloudscale.REVISION={{.ShortCommit}}
+      - -X github.com/cloudscale-ch/fleeting-plugin-cloudscale.REFERENCE={{.Tag}}
+      - -X github.com/cloudscale-ch/fleeting-plugin-cloudscale.BUILT={{.Date}}
+
 archives:
   - formats: ['tar.gz']
     # this name template makes the OS and Arch compatible with the results of `uname`.
