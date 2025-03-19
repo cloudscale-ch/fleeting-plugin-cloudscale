@@ -1,7 +1,7 @@
 package main
 
 import (
-	cloudscale "github.com/puzzle/fleeting-plugin-cloudscale"
+	cloudscale "github.com/cloudscale-ch/fleeting-plugin-cloudscale"
 	"gitlab.com/gitlab-org/fleeting/fleeting/plugin"
 )
 

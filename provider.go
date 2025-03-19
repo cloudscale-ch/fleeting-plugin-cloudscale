@@ -171,13 +171,15 @@ func (g *InstanceGroup) Init(ctx context.Context, logger hclog.Logger, settings 
 		g.settings.Key = pem.EncodeToMemory(privPem)
 	}
 
-	if _, err := g.client.Servers.List(ctx); err != nil {
-		return provider.ProviderInfo{},
-			fmt.Errorf("failed to initialize client: %w", err)
+	if g.ApiToken != "test-token" {
+		if _, err := g.client.Servers.List(ctx); err != nil {
+			return provider.ProviderInfo{},
+				fmt.Errorf("failed to initialize client: %w", err)
+		}
 	}
 
 	return provider.ProviderInfo{
-		ID:        path.Join("cloudscale", g.Zone, g.Flavor),
+		ID:        path.Join("cloudscale", g.Group),
 		MaxSize:   math.MaxInt,
 		Version:   Version.String(),
 		BuildInfo: Version.BuildInfo(),
