@@ -129,7 +129,11 @@ func (g *InstanceGroup) validate() error {
 }
 
 // Init initializes the ProviderInfo struct
-func (g *InstanceGroup) Init(ctx context.Context, logger hclog.Logger, settings provider.Settings) (info provider.ProviderInfo, err error) {
+func (g *InstanceGroup) Init(
+	ctx context.Context,
+	logger hclog.Logger,
+	settings provider.Settings,
+) (info provider.ProviderInfo, err error) {
 	g.settings = settings
 	g.log = logger.Named("fleeting-plugin-cloudscale").With(
 		"group", g.Group,
@@ -188,10 +192,15 @@ func (g *InstanceGroup) Init(ctx context.Context, logger hclog.Logger, settings 
 
 // Update updates instance data from the instance group, passing a function
 // to perform instance reconciliation.
-func (g *InstanceGroup) Update(ctx context.Context, update func(instance string, state provider.State)) error {
-	servers, err := g.client.Servers.List(ctx, cloudscale.WithTagFilter(g.tagMap()))
+func (g *InstanceGroup) Update(
+	ctx context.Context,
+	update func(instance string, state provider.State),
+) error {
+	servers, err := g.client.Servers.List(
+		ctx, cloudscale.WithTagFilter(g.tagMap()))
+
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to list servers: %w", err)
 	}
 
 	for _, server := range servers {
@@ -206,7 +215,10 @@ func (g *InstanceGroup) Update(ctx context.Context, update func(instance string,
 		case "changing":
 			state = provider.StateCreating
 		default:
-			g.log.Error("unexpected instance status", "id", id, "status", server.Status)
+			g.log.Error(
+				"unexpected instance status",
+				"id", id,
+				"status", server.Status)
 		}
 
 		update(id, state)
@@ -217,7 +229,10 @@ func (g *InstanceGroup) Update(ctx context.Context, update func(instance string,
 
 // Increase requests more instances to be created. It returns how many
 // instances were successfully requested.
-func (g *InstanceGroup) Increase(ctx context.Context, delta int) (succeeded int, err error) {
+func (g *InstanceGroup) Increase(
+	ctx context.Context,
+	delta int,
+) (succeeded int, err error) {
 	servers := make([]*cloudscale.Server, 0, delta)
 	errs := make([]error, 0)
 
@@ -270,7 +285,11 @@ func (g *InstanceGroup) Increase(ctx context.Context, delta int) (succeeded int,
 
 // Decrease removes the specified instances from the instance group. It
 // returns instance IDs of successful requests for removal.
-func (g *InstanceGroup) Decrease(ctx context.Context, ids []string) (succeeded []string, err error) {
+func (g *InstanceGroup) Decrease(
+	ctx context.Context,
+	ids []string,
+) (succeeded []string, err error) {
+
 	errs := make([]error, 0)
 
 	for _, id := range ids {
@@ -290,7 +309,11 @@ func (g *InstanceGroup) Decrease(ctx context.Context, ids []string) (succeeded [
 
 // ConnectInfo returns additional information about an instance,
 // useful for creating a connection.
-func (g *InstanceGroup) ConnectInfo(ctx context.Context, id string) (provider.ConnectInfo, error) {
+func (g *InstanceGroup) ConnectInfo(
+	ctx context.Context,
+	id string,
+) (provider.ConnectInfo, error) {
+
 	info := provider.ConnectInfo{ConnectorConfig: g.settings.ConnectorConfig}
 
 	server, err := g.client.Servers.Get(ctx, id)
@@ -311,7 +334,9 @@ func (g *InstanceGroup) ConnectInfo(ctx context.Context, id string) (provider.Co
 	}
 
 	info.Key = g.settings.Key
-	info.ExternalAddr = server.Interfaces[0].Addresses[0].Address // Only public address is supported at the moment.
+
+	// Only public addresses are supported at the moment
+	info.ExternalAddr = server.Interfaces[0].Addresses[0].Address
 
 	return info, nil
 }
