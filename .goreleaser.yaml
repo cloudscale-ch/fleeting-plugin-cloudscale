@@ -11,10 +11,16 @@ builds:
       - linux
       - windows
       - darwin
+
     main: ./cmd/fleeting-plugin-cloudscale
 
+    # Store the results in a way that is compatible with fleeting-artifact
+    # See https://gitlab.com/gitlab-org/fleeting/fleeting-artifact
+    binary: "{{ .Os }}/{{ .Arch }}/plugin"
+    no_unique_dist_dir: true
+
 archives:
-  - formats: [ 'tar.gz' ]
+  - formats: ['tar.gz']
     # this name template makes the OS and Arch compatible with the results of `uname`.
     name_template: >-
       {{ .ProjectName }}_
@@ -26,7 +32,7 @@ archives:
     # use zip for windows archives
     format_overrides:
       - goos: windows
-        format: zip
+        formats: zip
 
 changelog:
   sort: asc
@@ -34,4 +40,3 @@ changelog:
     exclude:
       - "^docs:"
       - "^test:"
-

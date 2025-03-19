@@ -9,36 +9,33 @@ on:
 permissions:
   contents: write
   packages: write
-  # issues: write
-  # id-token: write
 
 jobs:
-  goreleaser:
+  new-release:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
-          go-version: stable
-      - name: Run GoReleaser
-        uses: goreleaser/goreleaser-action@v6
-        with:
-          distribution: goreleaser
-          version: "~> v2"
-          args: release --clean
+          go-version: 1.24
+
+      - name: Create release with goreleaser
+        run: go tool goreleaser release --clean
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-  publish-container-image:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-go@v5
-        with:
-          go-version: 'stable'
 
-      - uses: ko-build/setup-ko@v0.8
-      - run: ko build --bare -t latest -t "${{ github.ref_name }}" ./cmd/fleeting-plugin-cloudscale
+      - name: Push container with fleeting-artifact
+        run: |
+          echo "$QUAY_IO_TOKEN" | go tool \
+            fleeting-artifact login \
+            -username cloudscalech+fleeting \
+            -password-stdin
+          go tool fleeting-artifact release \
+            "quay.io/cloudscalech/fleeting-plugin-cloudscale:$GITHUB_REF_NAME"
+        env:
+          QUAY_IO_TOKEN: ${{ secrets.QUAY_IO_TOKEN}}
