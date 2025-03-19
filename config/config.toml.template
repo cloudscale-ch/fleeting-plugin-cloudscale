@@ -37,7 +37,13 @@ concurrent = 40
   plugin = "quay.io/cloudscalech/fleeting-plugin-cloudscale:latest"
 
   # Wether instances should be removed when the controlling runner is stopped
-  delete_instances_on_shutdown = true
+  #
+  # Note that this is currently not supported due to the following bug in
+  # GitLab runner:
+  #
+  # https://gitlab.com/gitlab-org/gitlab-runner/-/issues/37642
+  #
+  delete_instances_on_shutdown = false
 
   # The command used to check if the VM is ready. By default, we check if
   # cloud-init has completed successfully (if it is present).
