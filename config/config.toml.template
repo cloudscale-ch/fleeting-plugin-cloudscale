@@ -70,7 +70,7 @@ concurrent = 40
 
   # The name of the scheduling group. You should use a unique name for each
   # runner that manages a set of VMs.
-  group = "fleeting-instances"
+  group = "fleeting"
 
   # The cloudscale.ch API token with write permissions.
   api_token = "$CLOUDSCALE_API_TOKEN"
