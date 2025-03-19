@@ -3,7 +3,7 @@ module github.com/puzzle/fleeting-plugin-cloudscale
 go 1.24
 
 require (
-	github.com/cloudscale-ch/cloudscale-go-sdk/v5 v5.0.1
+	github.com/cloudscale-ch/cloudscale-go-sdk/v5 v5.1.0
 	github.com/hashicorp/go-hclog v1.6.3
 	gitlab.com/gitlab-org/fleeting/fleeting v0.0.0-20241205014612-e4f2f6fcf29e
 	golang.org/x/crypto v0.35.0
