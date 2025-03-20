@@ -55,7 +55,10 @@ concurrent = 40
   # Maximum number of instances
   max_instances = 10
 
-  # How many jobs are run, before a runner is recycled
+  # How many jobs are run, before a runner is recycled. We recommend to not set
+  # this to zero, as instances will then never be recycled. Recycling however
+  # is important for security, as once created instances do not receive
+  # security updates.
   max_use_count = 1024
 
 [runners.autoscaler.connector_config]
@@ -96,6 +99,20 @@ concurrent = 40
   # The cloud-config applied to each instance. Note that GitLab expects these
   # instances to have a running docker daemon.
   user_data = """#cloud-config
+
+  # We recommend to keep this setting, though it will add up to 5 minutes
+  # to the launch time of your instance. While we update our images regulary,
+  # and when there are major security incidents, we do not have a nightly
+  # update mechanism in place yet that would ensure that these images always
+  # have the latest packages.
+  #
+  # When using custom built packages, this may not be necessary, and it is
+  # indeed the best way to really cut down on launch times (use a custom image
+  # with builtin docker tools and launching a runner instance may take less
+  # than a minute).
+  package_update: true
+  package_upgrade: true
+
   apt:
     sources:
       docker.list:
