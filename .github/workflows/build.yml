@@ -61,22 +61,25 @@ jobs:
           go-version: 1.24
           cache: false  # avoid cache-poisoning attacks
 
+      - name: Install go tools
+        run: go mod tidy -modfile tool.mod
+
       # We deliberately avoid using the official goreleaser action here,
       # because we added goreleaser with go -tool get, which stores the precise
       # goreleaser version and enables us to use the exact same one locally.
       - name: Create release with goreleaser
-        run: go tool goreleaser release --clean
+        run: go tool -modfile tool.mod goreleaser release --clean
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Push container image with fleeting-artifact
         run: |
-          echo "$QUAY_IO_TOKEN" | go tool \
+          echo "$QUAY_IO_TOKEN" | go tool -modfile tool.mod \
             fleeting-artifact login \
             -username cloudscalech+fleeting \
             -password-stdin \
             quay.io
-          go tool fleeting-artifact release \
+          go tool -modfile tool.mod fleeting-artifact release \
             "quay.io/cloudscalech/fleeting-plugin-cloudscale:$GITHUB_REF_NAME"
         env:
           QUAY_IO_TOKEN: ${{ secrets.QUAY_IO_TOKEN}}

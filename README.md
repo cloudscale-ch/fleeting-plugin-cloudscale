@@ -65,3 +65,25 @@ Note that you need to change the `plugin` in `config/config.toml` to the followi
 ```toml
 plugin = "fleeting-plugin-cloudscale"
 ```
+
+### Go Tools
+
+This repository uses `go tool` to run and version development tools. They are tracked in the separate `tool.mod` modfile.
+
+To list all tools:
+
+```bash
+go tool -modfile tool.mod
+```
+
+To add a tool to tool.mod:
+
+```bash
+go get -tool -modfile tool.md <url>
+```
+
+To install the tool:
+
+```bash
+go mod tidy -modfile tool.md
+```
