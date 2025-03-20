@@ -49,3 +49,4 @@ changelog:
       - "^docs:"
       - "^test:"
       - "^build:"
+      - "^ci:"
