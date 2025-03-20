@@ -1,8 +1,120 @@
 # Fleeting Plugin Cloudscale
 
-A [fleeting](https://gitlab.com/gitlab-org/fleeting/fleeting) plugin for [cloudscale.ch](https://www.cloudscale.ch/en).
+A [fleeting](https://gitlab.com/gitlab-org/fleeting/fleeting) plugin for [cloudscale.ch](https://www.cloudscale.ch), for automatically scaled GitLab Runners.
 
-## Plugin Configuration
+## ✅ Features
+
+- 🚀 Automatically provide GitLab Runner capacity with cloudscale.ch VMs.
+- ♻️ Provide capacity when it is needed, reduce costs when it is not.
+- 🧩 Well integrated into self-managed GitLab instances.
+
+### Caveats
+
+- 🔒 Private networks are not yet supported.
+- ⬇️ Stopped runner instances are automatically removed and recycled.
+
+## 🏎️ Demo and Ansible Playbook
+
+To take this setup for a test-drive, use our Ansible playbook that installs a self-managed GitLab instance and automatically configures our Fleeting plugin:
+
+https://github.com/cloudscale-ch/gitlab-runner
+
+You can use this as a demo, or as a starting point to introduce GitLab into your own infrastructure.
+
+## 💪 Installation
+
+To get started, install GitLab according to GitLab's official documentation:
+
+https://about.gitlab.com/install/
+
+Next, you need at least one GitLab runner that is always on. This runner will be responsible for launching other runners, as needed. It can be run anywhere and can also run its own jobs.
+
+A good option, so that you do not have to use extra resources for this runner, is to simply install it on the same host as your GitLab server. Here, you want a runner that has no other jobs (or its CI jobs will compete with your GitLab server for resources).
+
+Either way, the following applies whether you install this runner on your GitLab server host, or in a dedicated VM or container.
+
+### Install GitLab Runner
+
+There are multiple ways to install GitLab runner:
+
+https://docs.gitlab.com/runner/install/
+
+We recommend using a distro-specific package, as it makes updates easier:
+
+https://docs.gitlab.com/runner/install/linux-repository.html
+
+Please skip the "Register a runner" step, as this will be done with a more specific call further down.
+
+### Acquire GitLab Runner Registration Token
+
+To register your runner, you need a registration token. This can be a global token (to create a shared runner) or a project-specific token.
+
+For a shared runner, open the admin dashboard at `/admin`, and select "Runners" from the left (`/admin/runners`). Clicking on "New instance runner" allows you to define a new runner.
+
+Note that to actually register the runner, you should not just run the command shown by GitLab, but rather the command below.
+
+### Register GitLab Runner
+
+The following command will register the GitLab runner. It won't work yet until the example config has been applied, and it won't show as online until then.
+
+Use the token shown to you in the "New instance runner" wizard:
+
+```bash
+# The endpoint of your GitLab instance
+export GITLAB_URL = "https://<your-gitlab-instance>"
+
+# The runner token shown in the wizard
+export RUNNER_TOKEN = "glpat-..."
+
+sudo gitlab-runner register \
+   --non-interactive \
+   --url "$GITLAB_URL" \
+   --registration-token "$RUNNER_TOKEN" \
+   --executor "docker-autoscaler" \
+   --docker-image alpine
+```
+
+### Configure GitLab Runner
+
+Create a backup of current config, then download the config template and fill it out with the editor of your choice:
+
+```bash
+# Create backup
+cp /etc/gitlab-runner/config.toml /etc/gitlab-runner/config.toml.bak
+
+# Download template
+curl -sL https://raw.githubusercontent.com/cloudscale-ch/fleeting-plugin-cloudscale/refs/heads/main/config/config.toml.template \
+   > /etc/gitlab/runner-config.toml
+
+# Edit config
+vim /etc/gitlab-runner-config.toml
+```
+
+You should at least change the following values:
+
+- `$GITLAB_URL`
+- `$RUNNER_TOKEN`
+- `$CLOUDSCALE_API_TOKEN`
+
+The comments in the file should help you decide on good defaults for your specific use-case.
+
+### Install Fleeting Plugin
+
+Having configured your runner thusly, install `fleeting-plugin-cloudscale` as defined in the config file:
+
+```bash
+sudo gitlab-runner fleeting install
+```
+
+Your runner should pick up config changes automatically. It may have to create its first autoscaled instance, before it is shown as online on your GitLab instance, but after that it should work without intervention.
+
+The log may be helpful, if you run into trouble:
+
+```
+sudo journalctl -u gitlab-runner --since today
+```
+
+## ⚙️ Plugin Configuration
 
 The following parameters are supported:
 
@@ -27,7 +139,7 @@ The following parameters are supported:
 
 Note: The `username` can be left empty when using an official image (from `/v1/images`). When using a custom image, the user defaults to `root` and should likely be configured explicitly.
 
-## Development
+## ⌨️ Development
 
 To test the plugin locally, you can use the provided `compose.yml`.
 
@@ -87,3 +199,15 @@ To install the tool:
 ```bash
 go mod tidy -modfile tool.md
 ```
+
+### Release Process
+
+To create a new release, simply tag the commit that should become the release:
+
+```bash
+git tag <major>.<minor>.<patch>
+git push
+git push --tags 
+```
+
+Once all CI jobs have completed, be sure to check the generated release notes, and maybe editorialize them somewhat.
