@@ -1,6 +1,6 @@
 # Fleeting Plugin Cloudscale
 
-A [fleeting](https://gitlab.com/gitlab-org/fleeting/fleeting) plugin for [cloudscale.ch](https://www.cloudscale.ch), for automatically scaled GitLab Runners.
+A [fleeting](https://docs.gitlab.com/runner/fleet_scaling/fleeting/) plugin for [cloudscale.ch](https://www.cloudscale.ch), for automatically scaled GitLab runners.
 
 ## ✅ Features
 
@@ -114,6 +114,17 @@ The log may be helpful, if you run into trouble:
 sudo journalctl -u gitlab-runner --since today
 ```
 
+### Upgrades
+
+To upgrade to a newer release of `fleeting-plugin-cloudscale`, run the following:
+
+```bash
+gitlab-runner fleeting install --upgrade
+systemctl restart gitlab-runner
+```
+
+⚠️ This will recreate all runners, so you might want to do this outside your peak CI hours.
+
 ## ⚙️ Plugin Configuration
 
 The following parameters are supported:
@@ -139,7 +150,7 @@ The following parameters are supported:
 
 Note: The `username` can be left empty when using an official image (from `/v1/images`). When using a custom image, the user defaults to `root` and should likely be configured explicitly.
 
-## ⌨️ Development
+## 💡 Development
 
 To test the plugin locally, you can use the provided `compose.yml`.
 
