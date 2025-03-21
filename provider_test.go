@@ -3,6 +3,7 @@ package cloudscale
 import (
 	"testing"
 
+	cloudscale "github.com/cloudscale-ch/cloudscale-go-sdk/v5"
 	hclog "github.com/hashicorp/go-hclog"
 	"github.com/stretchr/testify/assert"
 	"gitlab.com/gitlab-org/fleeting/fleeting/provider"
@@ -60,6 +61,7 @@ func TestRandomServerName(t *testing.T) {
 
 	for i := 0; i < 100; i++ {
 		assert.NotEqual(t, group.serverName(), group.serverName())
+		assert.NoError(t, group.ensureExpectedServerName(group.serverName()))
 	}
 }
 
@@ -100,8 +102,69 @@ func TestTagMap(t *testing.T) {
 	group.Group = "fleeting"
 	tags := group.tagMap()
 	assert.Equal(t, tags["fleeting-instance-group"], "fleeting")
+	assert.NoError(t, group.ensureExpectedTagMap(cloudscale.TagMap{
+		"fleeting-instance-group": "fleeting",
+	}))
 
 	group.Group = "alt"
 	tags = group.tagMap()
 	assert.Equal(t, tags["fleeting-instance-group"], "alt")
+	assert.NoError(t, group.ensureExpectedTagMap(cloudscale.TagMap{
+		"fleeting-instance-group": "alt",
+	}))
+}
+
+func TestSafeToDelete(t *testing.T) {
+
+	group := InstanceGroup{
+		Group:        "fleeting",
+		ApiToken:     "test-token",
+		Flavor:       "flex-4-2",
+		Image:        "ubuntu-24.04",
+		VolumeSizeGB: 10,
+	}
+
+	_, err := group.Init(
+		t.Context(), hclog.Default(), provider.Settings{})
+
+	assert.NoError(t, err)
+
+	server := cloudscale.Server{
+		Name: "fleeting-0123456789",
+		TaggedResource: cloudscale.TaggedResource{
+			Tags: cloudscale.TagMap{
+				"fleeting-instance-group": "fleeting",
+			},
+		},
+	}
+
+	assert.NoError(t, group.ensureSafeToDelete(&server))
+
+	server = cloudscale.Server{
+		Name: "prod-db",
+	}
+
+	assert.Error(t, group.ensureSafeToDelete(&server))
+
+	server = cloudscale.Server{
+		Name: "prod-db",
+		TaggedResource: cloudscale.TaggedResource{
+			Tags: cloudscale.TagMap{
+				"fleeting-instance-group": "fleeting",
+			},
+		},
+	}
+
+	assert.Error(t, group.ensureSafeToDelete(&server))
+
+	server = cloudscale.Server{
+		Name: "fleeting-0123456789",
+		TaggedResource: cloudscale.TaggedResource{
+			Tags: cloudscale.TagMap{
+				"fleeting-instance-group": "fleeting-alt",
+			},
+		},
+	}
+
+	assert.Error(t, group.ensureSafeToDelete(&server))
 }

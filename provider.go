@@ -24,6 +24,9 @@ import (
 var validGroupName *regexp.Regexp = regexp.MustCompile(
 	"^[a-zA-Z]{1}[a-zA-Z0-9_.-]*$")
 
+var expectedServerName *regexp.Regexp = regexp.MustCompile(
+	"^[a-zA-Z]{1}[a-zA-Z0-9_.-]*-[a-z0-9]{10}$")
+
 var _ provider.InstanceGroup = (*InstanceGroup)(nil)
 
 type InstanceGroup struct {
@@ -126,6 +129,57 @@ func (g *InstanceGroup) validate() error {
 	}
 
 	return errors.Join(errs...)
+}
+
+func (g *InstanceGroup) ensureSafeToDelete(server *cloudscale.Server) error {
+	if err := g.ensureExpectedTagMap(server.Tags); err != nil {
+		return err
+	}
+	if err := g.ensureExpectedServerName(server.Name); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (g *InstanceGroup) ensureExpectedTagMap(tags cloudscale.TagMap) error {
+
+	tagmap := g.tagMap()
+
+	if len(tagmap) == 0 {
+		return fmt.Errorf("no tagmap found")
+	}
+
+	for key, expected := range g.tagMap() {
+		found, exists := tags[key]
+
+		if !exists {
+			return fmt.Errorf("tag missing: %s", key)
+		}
+
+		if expected != found {
+			return fmt.Errorf(
+				"tag %s has wrong value: found %s, expected %s",
+				key,
+				found,
+				expected,
+			)
+		}
+	}
+
+	return nil
+}
+
+func (g *InstanceGroup) ensureExpectedServerName(name string) error {
+	if !strings.HasPrefix(name, g.Group) {
+		return fmt.Errorf("missing server name prefix: '%s-'", g.Group)
+	}
+
+	if !expectedServerName.MatchString(name) {
+		return fmt.Errorf("server name does not match %s", expectedServerName)
+	}
+
+	return nil
 }
 
 // Init initializes the ProviderInfo struct
@@ -293,9 +347,25 @@ func (g *InstanceGroup) Decrease(
 	errs := make([]error, 0)
 
 	for _, id := range ids {
-		g.log.Info("deleting server", "uuid", id)
 
-		err := g.client.Servers.Delete(ctx, id)
+		// Before we delete a server, we assert that we can do so. We do this
+		// by double-checking our assumptions. If there is any bug elsewhere,
+		// we want to be sure to not delete servers the user cares about.
+		server, err := g.client.Servers.Get(ctx, id)
+		if err != nil {
+			errs = append(errs, fmt.Errorf(
+				"failed to fetch server before deleting %s: %w", id, err))
+			continue
+		}
+
+		if err := g.ensureSafeToDelete(server); err != nil {
+			errs = append(errs, fmt.Errorf(
+				"prevented from deleting server %s: %w", id, err))
+			continue
+		}
+
+		g.log.Info("deleting server", "uuid", id)
+		err = g.client.Servers.Delete(ctx, id)
 		if err != nil {
 			errs = append(errs, fmt.Errorf(
 				"failed to delete server %s: %w", id, err))
