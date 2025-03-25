@@ -61,10 +61,10 @@ Use the token shown to you in the "New instance runner" wizard:
 
 ```bash
 # The endpoint of your GitLab instance
-export GITLAB_URL = "https://<your-gitlab-instance>"
+export GITLAB_URL="https://<your-gitlab-instance>"
 
 # The runner token shown in the wizard
-export RUNNER_TOKEN = "glpat-..."
+export RUNNER_TOKEN="glpat-..."
 
 sudo gitlab-runner register \
    --non-interactive \
@@ -83,11 +83,10 @@ Create a backup of current config, then download the config template and fill it
 cp /etc/gitlab-runner/config.toml /etc/gitlab-runner/config.toml.bak
 
 # Download template
-curl -sL https://raw.githubusercontent.com/cloudscale-ch/fleeting-plugin-cloudscale/refs/heads/main/config/config.toml.template \
-   > /etc/gitlab/runner-config.toml
+sudo curl -sL https://raw.githubusercontent.com/cloudscale-ch/fleeting-plugin-cloudscale/refs/heads/main/config/config.toml.template -o /etc/gitlab-runner/config.toml
 
 # Edit config
-vim /etc/gitlab-runner-config.toml
+vim /etc/gitlab-runner/config.toml
 ```
 
 You should at least change the following values:
@@ -105,6 +104,9 @@ Having configured your runner thusly, install `fleeting-plugin-cloudscale` as de
 ```bash
 sudo gitlab-runner fleeting install
 ```
+
+> [!IMPORTANT]  
+> Note the sudo - fleeting will fail to install the plugin without it.
 
 Your runner should pick up config changes automatically. It may have to create its first autoscaled instance, before it is shown as online on your GitLab instance, but after that it should work without intervention.
 
