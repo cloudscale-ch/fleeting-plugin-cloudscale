@@ -125,7 +125,8 @@ gitlab-runner fleeting install --upgrade
 systemctl restart gitlab-runner
 ```
 
-⚠️ This will recreate all runners, so you might want to do this outside your peak CI hours.
+> [!WARNING]  
+> This will recreate all runners, so you might want to do this outside your peak CI hours.
 
 ## ⚙️ Plugin Configuration
 
