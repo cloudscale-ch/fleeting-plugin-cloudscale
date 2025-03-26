@@ -134,8 +134,8 @@ The following parameters are supported:
 
 | Parameter        | Type   | Description                                                                                                     |
 | ---------------- | ------ | --------------------------------------------------------------------------------------------------------------- |
-| `name`           | string | Name of the instance group                                                                                      |
-| `token`          | string | cloudscale API token                                                                                            |
+| `group`          | string | The name of the scheduling group.                                                                               |
+| `api_token`      | string | cloudscale API token                                                                                            |
 | `zone`           | string | Zone where virtual machine is started, [available zones](https://www.cloudscale.ch/en/api/v1#regions-and-zones) |
 | `flavor`         | string | Flavor of virtual machine, [available flavors](https://www.cloudscale.ch/en/pricing)                            |
 | `image`          | string | Image (slug) of virtual machine, [more information](https://www.cloudscale.ch/en/api/v1#images)                 |
