@@ -96,6 +96,9 @@ concurrent = 40
   # The root disk size of each instance.
   volume_size_gb = 25
 
+  # Create the instances in a private network, instead of the default public one.
+  # network = "90b7d32b-1400-4d78-95ef-5c4aa9aaab7b"
+
   # The cloud-config applied to each instance. Note that GitLab expects these
   # instances to have a running docker daemon.
   user_data = """#cloud-config

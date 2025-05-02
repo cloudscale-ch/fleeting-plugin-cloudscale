@@ -37,6 +37,7 @@ type InstanceGroup struct {
 	Zone     string `json:"zone"`
 	Flavor   string `json:"flavor"`
 	Image    string `json:"image"`
+	Network  string `json:"network,omitempty"`
 	UserData string `json:"user_data"`
 
 	VolumeSizeGB int `json:"volume_size_gb,omitempty"`
@@ -202,6 +203,10 @@ func (g *InstanceGroup) Init(
 		g.settings.Username = "root"
 	}
 
+	if g.Network == "" {
+		g.Network = "public"
+	}
+
 	// Validate config
 	if err := g.validate(); err != nil {
 		return provider.ProviderInfo{}, fmt.Errorf(
@@ -309,6 +314,9 @@ func (g *InstanceGroup) Increase(
 			SSHKeys:      []string{string(publicKey)},
 			VolumeSizeGB: g.VolumeSizeGB,
 			UserData:     g.UserData,
+			Interfaces:   &[]cloudscale.InterfaceRequest{
+								cloudscale.InterfaceRequest{Network: g.Network},
+							},
 			TaggedResourceRequest: cloudscale.TaggedResourceRequest{
 				Tags: &tagMap,
 			},
