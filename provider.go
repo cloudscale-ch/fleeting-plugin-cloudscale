@@ -14,6 +14,7 @@ import (
 	"path"
 	"regexp"
 	"strings"
+	"sync"
 
 	cloudscale "github.com/cloudscale-ch/cloudscale-go-sdk/v5"
 	hclog "github.com/hashicorp/go-hclog"
@@ -287,8 +288,10 @@ func (g *InstanceGroup) Increase(
 	ctx context.Context,
 	delta int,
 ) (succeeded int, err error) {
-	servers := make([]*cloudscale.Server, 0, delta)
-	errs := make([]error, 0)
+	// precreating the slices with the right lenght, so we can later
+	// concurrently write to them
+	errs := make([]error, delta)
+	servers := make([]*cloudscale.Server, delta)
 
 	publicKey, err := g.publicKey()
 	if err != nil {
@@ -297,44 +300,52 @@ func (g *InstanceGroup) Increase(
 
 	tagMap := g.tagMap()
 
+	var wg sync.WaitGroup
+
 	for i := 0; i < delta; i++ {
-		serverName := g.serverName()
+		// We run all iterations of this loop in parallel using goroutines
+		// the waitgroup (wg) enables us to wait later on for them to complete
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			serverName := g.serverName()
 
-		g.log.Info("creating server", "name", serverName, "flavor", g.Flavor)
-		server, err := g.client.Servers.Create(ctx, &cloudscale.ServerRequest{
-			Name:         serverName,
-			Zone:         g.Zone,
-			Flavor:       g.Flavor,
-			Image:        g.Image,
-			SSHKeys:      []string{string(publicKey)},
-			VolumeSizeGB: g.VolumeSizeGB,
-			UserData:     g.UserData,
-			TaggedResourceRequest: cloudscale.TaggedResourceRequest{
-				Tags: &tagMap,
-			},
-		})
+			g.log.Info("creating server", "name", serverName, "flavor", g.Flavor)
+			server, err := g.client.Servers.Create(ctx, &cloudscale.ServerRequest{
+				Name:         serverName,
+				Zone:         g.Zone,
+				Flavor:       g.Flavor,
+				Image:        g.Image,
+				SSHKeys:      []string{string(publicKey)},
+				VolumeSizeGB: g.VolumeSizeGB,
+				UserData:     g.UserData,
+				TaggedResourceRequest: cloudscale.TaggedResourceRequest{
+					Tags: &tagMap,
+				},
+			})
 
-		if err != nil {
-			errs = append(errs, fmt.Errorf(
-				"failed to create %s: %w", serverName, err))
-			continue
-		}
+			if err != nil {
+				errs[i] = fmt.Errorf("failed to create %s: %w", serverName, err)
+				return
+			}
 
-		server, err = g.client.Servers.WaitFor(
-			ctx, server.UUID, cloudscale.ServerIsRunning)
+			server, err = g.client.Servers.WaitFor(
+				ctx, server.UUID, cloudscale.ServerIsRunning)
 
-		if err != nil {
-			errs = append(errs, fmt.Errorf(
-				"failed to wait for %s: %w", serverName, err))
-			continue
-		}
+			if err != nil {
+				errs[i] = fmt.Errorf(
+					"failed to wait for %s: %w", serverName, err)
+				return
+			}
 
-		g.log.Info("created server", "name", serverName, "uuid", server.UUID)
-		servers = append(servers, server)
+			g.log.Info("created server", "name", serverName, "uuid", server.UUID)
+			servers[i] = server
+		}()
 	}
+	// We wait for all previously started goroutines to complete before we exit
+	wg.Wait()
 
 	return len(servers), errors.Join(errs...)
-
 }
 
 // Decrease removes the specified instances from the instance group. It
@@ -344,35 +355,47 @@ func (g *InstanceGroup) Decrease(
 	ids []string,
 ) (succeeded []string, err error) {
 
-	errs := make([]error, 0)
+	// precreating the slices with the right lenght, so we can later
+	// concurrently write to them
+	errs := make([]error, len(ids))
+	succeeded = make([]string, len(ids))
+	var wg sync.WaitGroup
 
-	for _, id := range ids {
+	for idx, id := range ids {
+		// We run all iterations of this loop in parallel using goroutines
+		// the waitgroup (wg) enables us to wait later on for them to complete
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
 
-		// Before we delete a server, we assert that we can do so. We do this
-		// by double-checking our assumptions. If there is any bug elsewhere,
-		// we want to be sure to not delete servers the user cares about.
-		server, err := g.client.Servers.Get(ctx, id)
-		if err != nil {
-			errs = append(errs, fmt.Errorf(
-				"failed to fetch server before deleting %s: %w", id, err))
-			continue
-		}
+			// Before we delete a server, we assert that we can do so. We do this
+			// by double-checking our assumptions. If there is any bug elsewhere,
+			// we want to be sure to not delete servers the user cares about.
+			server, err := g.client.Servers.Get(ctx, id)
+			if err != nil {
+				errs[idx] = fmt.Errorf("failed to fetch server before deleting %s: %w", id, err)
+				return
+			}
 
-		if err := g.ensureSafeToDelete(server); err != nil {
-			errs = append(errs, fmt.Errorf(
-				"prevented from deleting server %s: %w", id, err))
-			continue
-		}
+			if err := g.ensureSafeToDelete(server); err != nil {
+				errs[idx] = fmt.Errorf(
+					"prevented from deleting server %s: %w", id, err)
+				return
+			}
 
-		g.log.Info("deleting server", "uuid", id)
-		err = g.client.Servers.Delete(ctx, id)
-		if err != nil {
-			errs = append(errs, fmt.Errorf(
-				"failed to delete server %s: %w", id, err))
-			continue
-		}
-		succeeded = append(succeeded, id)
+			g.log.Info("deleting server", "uuid", id)
+			err = g.client.Servers.Delete(ctx, id)
+			if err != nil {
+				errs[idx] = fmt.Errorf(
+					"failed to delete server %s: %w", id, err)
+				return
+			}
+			succeeded[idx] = id
+		}()
 	}
+
+	// We wait for all previously started goroutines to complete before we exit
+	wg.Wait()
 
 	return succeeded, errors.Join(errs...)
 }
