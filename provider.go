@@ -37,8 +37,10 @@ type InstanceGroup struct {
 	Zone     string `json:"zone"`
 	Flavor   string `json:"flavor"`
 	Image    string `json:"image"`
-	Network  string `json:"network,omitempty"`
 	UserData string `json:"user_data"`
+
+	Network  string `json:"network,omitempty"`
+	ExtraNetworks  []string `json:"extra_networks,omitempty"`
 
 	VolumeSizeGB int `json:"volume_size_gb,omitempty"`
 
@@ -203,10 +205,6 @@ func (g *InstanceGroup) Init(
 		g.settings.Username = "root"
 	}
 
-	if g.Network == "" {
-		g.Network = "public"
-	}
-
 	// Validate config
 	if err := g.validate(); err != nil {
 		return provider.ProviderInfo{}, fmt.Errorf(
@@ -292,9 +290,6 @@ func (g *InstanceGroup) Increase(
 	ctx context.Context,
 	delta int,
 ) (succeeded int, err error) {
-	servers := make([]*cloudscale.Server, 0, delta)
-	errs := make([]error, 0)
-
 	publicKey, err := g.publicKey()
 	if err != nil {
 		return 0, err
