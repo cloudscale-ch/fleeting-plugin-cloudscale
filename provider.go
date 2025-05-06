@@ -355,47 +355,35 @@ func (g *InstanceGroup) Decrease(
 	ids []string,
 ) (succeeded []string, err error) {
 
-	// precreating the slices with the right lenght, so we can later
-	// concurrently write to them
-	errs := make([]error, len(ids))
-	succeeded = make([]string, len(ids))
-	var wg sync.WaitGroup
+	errs := make([]error, 0)
 
-	for idx, id := range ids {
-		// We run all iterations of this loop in parallel using goroutines
-		// the waitgroup (wg) enables us to wait later on for them to complete
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
+	for _, id := range ids {
 
-			// Before we delete a server, we assert that we can do so. We do this
-			// by double-checking our assumptions. If there is any bug elsewhere,
-			// we want to be sure to not delete servers the user cares about.
-			server, err := g.client.Servers.Get(ctx, id)
-			if err != nil {
-				errs[idx] = fmt.Errorf("failed to fetch server before deleting %s: %w", id, err)
-				return
-			}
+		// Before we delete a server, we assert that we can do so. We do this
+		// by double-checking our assumptions. If there is any bug elsewhere,
+		// we want to be sure to not delete servers the user cares about.
+		server, err := g.client.Servers.Get(ctx, id)
+		if err != nil {
+			errs = append(errs, fmt.Errorf(
+				"failed to fetch server before deleting %s: %w", id, err))
+			continue
+		}
 
-			if err := g.ensureSafeToDelete(server); err != nil {
-				errs[idx] = fmt.Errorf(
-					"prevented from deleting server %s: %w", id, err)
-				return
-			}
+		if err := g.ensureSafeToDelete(server); err != nil {
+			errs = append(errs, fmt.Errorf(
+				"prevented from deleting server %s: %w", id, err))
+			continue
+		}
 
-			g.log.Info("deleting server", "uuid", id)
-			err = g.client.Servers.Delete(ctx, id)
-			if err != nil {
-				errs[idx] = fmt.Errorf(
-					"failed to delete server %s: %w", id, err)
-				return
-			}
-			succeeded[idx] = id
-		}()
+		g.log.Info("deleting server", "uuid", id)
+		err = g.client.Servers.Delete(ctx, id)
+		if err != nil {
+			errs = append(errs, fmt.Errorf(
+				"failed to delete server %s: %w", id, err))
+			continue
+		}
+		succeeded = append(succeeded, id)
 	}
-
-	// We wait for all previously started goroutines to complete before we exit
-	wg.Wait()
 
 	return succeeded, errors.Join(errs...)
 }
