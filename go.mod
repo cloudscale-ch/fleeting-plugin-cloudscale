@@ -3,7 +3,7 @@ module github.com/cloudscale-ch/fleeting-plugin-cloudscale
 go 1.24
 
 require (
-	github.com/cloudscale-ch/cloudscale-go-sdk/v5 v5.1.0
+	github.com/cloudscale-ch/cloudscale-go-sdk/v6 v6.0.0
 	github.com/hashicorp/go-hclog v1.6.3
 	github.com/stretchr/testify v1.10.0
 	gitlab.com/gitlab-org/fleeting/fleeting v0.0.0-20250116074924-5d69933ca3b8
@@ -20,7 +20,6 @@ require (
 	github.com/kr/pretty v0.3.1 // indirect
 	github.com/mattn/go-colorable v0.1.14 // indirect
 	github.com/mattn/go-isatty v0.0.20 // indirect
-	github.com/mitchellh/go-testing-interface v1.14.1 // indirect
 	github.com/oklog/run v1.1.0 // indirect
 	github.com/pmezard/go-difflib v1.0.1-0.20181226105442-5d4384ee4fb2 // indirect
 	github.com/rogpeppe/go-internal v1.13.1 // indirect

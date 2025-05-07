@@ -3,7 +3,7 @@ package cloudscale
 import (
 	"testing"
 
-	cloudscale "github.com/cloudscale-ch/cloudscale-go-sdk/v5"
+	cloudscale "github.com/cloudscale-ch/cloudscale-go-sdk/v6"
 	hclog "github.com/hashicorp/go-hclog"
 	"github.com/stretchr/testify/assert"
 	"gitlab.com/gitlab-org/fleeting/fleeting/provider"
