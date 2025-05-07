@@ -39,8 +39,7 @@ type InstanceGroup struct {
 	Image    string `json:"image"`
 	UserData string `json:"user_data"`
 
-	Network  string `json:"network,omitempty"`
-	ExtraNetworks  []string `json:"extra_networks,omitempty"`
+	Interfaces []cloudscale.InterfaceRequest `json:"interfaces,omitempty"`
 
 	VolumeSizeGB int `json:"volume_size_gb,omitempty"`
 
@@ -117,6 +116,14 @@ func (g *InstanceGroup) validate() error {
 
 	if g.Zone != "" && g.Zone != "rma1" && g.Zone != "lpg1" {
 		err("plugin_config: zone %s should be rma1 or lpg1", g.Zone)
+	}
+
+	if g.Interfaces == nil {
+		g.Interfaces = []cloudscale.InterfaceRequest{
+			cloudscale.InterfaceRequest{
+				Network: "public",
+			},
+		}
 	}
 
 	if g.VolumeSizeGB < 10 {

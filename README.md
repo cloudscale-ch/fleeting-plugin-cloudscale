@@ -140,8 +140,7 @@ The following parameters are supported:
 | `image`          | string | Image (slug) of virtual machine, [more information](https://www.cloudscale.ch/en/api/v1#images)                 |
 | `volume_size_gb` | number | The size of the root volume in GiB. Must be at least `10`.                                                      |
 | `user_data`      | string | Depending on the image choice is either in the format of cloud-init (YAML) or Ignition (JSON).                  |
-| `network`        | string | The primary network to attach to the machines. Defaults to `public`. You need to ensure the runner controller can reach the machines via this one.                                                      |
-| `extra_networks` | string | Additional networks to be added to the machines.                                                                |
+| `interfaces`     | object | Describes the interfaces to attach to the instances. Check the config template for some examples.               |
 
 ### Default connector config
 
