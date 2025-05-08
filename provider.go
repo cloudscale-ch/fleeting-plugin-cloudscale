@@ -15,7 +15,7 @@ import (
 	"regexp"
 	"strings"
 
-	cloudscale "github.com/cloudscale-ch/cloudscale-go-sdk/v5"
+	cloudscale "github.com/cloudscale-ch/cloudscale-go-sdk/v6"
 	hclog "github.com/hashicorp/go-hclog"
 	"gitlab.com/gitlab-org/fleeting/fleeting/provider"
 	"golang.org/x/crypto/ssh"
