@@ -297,8 +297,9 @@ func (g *InstanceGroup) Increase(
 
 	// Channel for server uuids
 	servers := make(chan string)
+	var server_counter int // needed for returning the number of successfull instances
 	
-	var errs_mutext sync.Mutex
+	var mutex sync.Mutex
 	errs := make([]error, delta)
 
 	// Await all servers being ready
@@ -315,12 +316,17 @@ func (g *InstanceGroup) Increase(
 					cloudscale.ServerIsRunning,
 				)
 				if err != nil {
-					errs_mutext.Lock()
-					defer errs_mutext.Unlock()
+					mutex.Lock()
+					defer mutex.Unlock()
 					errs = append(errs, 
 						fmt.Errorf("failed to wait for %s: %w", server.Name, err))
 					return
 				}
+
+				mutex.Lock()
+				defer mutex.Unlock()
+				server_counter += 1
+
 				g.log.Info("created server", "name", server.Name, "uuid", server.UUID)
 			}(uuid)
 		}
@@ -346,11 +352,11 @@ func (g *InstanceGroup) Increase(
 		})
 
 		if err != nil {
-			errs_mutext.Lock()
-			defer errs_mutext.Unlock()
+			mutex.Lock()
+			defer mutex.Unlock()
 			errs = append(errs, 
 				fmt.Errorf("failed to create %s: %w", serverName, err))
-			return
+			continue
 		}
 
 		// Send the uuid to the "wait" goroutine
@@ -360,7 +366,7 @@ func (g *InstanceGroup) Increase(
 	
 	// We wait for all previously started goroutines to complete before we return
 	wg.Wait()
-	return len(servers), errors.Join(errs...)
+	return server_counter, errors.Join(errs...)
 }
 
 // Decrease removes the specified instances from the instance group. It
