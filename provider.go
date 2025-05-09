@@ -288,11 +288,6 @@ func (g *InstanceGroup) Increase(
 	ctx context.Context,
 	delta int,
 ) (succeeded int, err error) {
-	// precreating the slices with the right lenght, so we can later
-	// concurrently write to them
-	errs := make([]error, delta)
-	servers := make([]*cloudscale.Server, delta)
-
 	publicKey, err := g.publicKey()
 	if err != nil {
 		return 0, err
@@ -300,51 +295,71 @@ func (g *InstanceGroup) Increase(
 
 	tagMap := g.tagMap()
 
+	// Channel for server uuids
+	servers := make(chan string)
+	
+	var errs_mutext sync.Mutex
+	errs := make([]error, delta)
+
+	// Await all servers being ready
 	var wg sync.WaitGroup
+	wg.Add(1)
+	go func(servers <-chan string) {
+		for uuid := range servers {
+			wg.Add(1)
+			go func(uuid string) {
+				defer wg.Done()
+				server, err := g.client.Servers.WaitFor(
+					ctx,
+					uuid,
+					cloudscale.ServerIsRunning,
+				)
+				if err != nil {
+					errs_mutext.Lock()
+					defer errs_mutext.Unlock()
+					errs = append(errs, 
+						fmt.Errorf("failed to wait for %s: %w", server.Name, err))
+					return
+				}
+				g.log.Info("created server", "name", server.Name, "uuid", server.UUID)
+			}(uuid)
+		}
+		wg.Done()
+	}(servers)
 
+	// Create the servers
 	for i := 0; i < delta; i++ {
-		// We run all iterations of this loop in parallel using goroutines
-		// the waitgroup (wg) enables us to wait later on for them to complete
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-			serverName := g.serverName()
+		serverName := g.serverName()
 
-			g.log.Info("creating server", "name", serverName, "flavor", g.Flavor)
-			server, err := g.client.Servers.Create(ctx, &cloudscale.ServerRequest{
-				Name:         serverName,
-				Zone:         g.Zone,
-				Flavor:       g.Flavor,
-				Image:        g.Image,
-				SSHKeys:      []string{string(publicKey)},
-				VolumeSizeGB: g.VolumeSizeGB,
-				UserData:     g.UserData,
-				TaggedResourceRequest: cloudscale.TaggedResourceRequest{
-					Tags: &tagMap,
-				},
-			})
+		g.log.Info("creating server", "name", serverName, "flavor", g.Flavor)
+		server, err := g.client.Servers.Create(ctx, &cloudscale.ServerRequest{
+			Name:         serverName,
+			Zone:         g.Zone,
+			Flavor:       g.Flavor,
+			Image:        g.Image,
+			SSHKeys:      []string{string(publicKey)},
+			VolumeSizeGB: g.VolumeSizeGB,
+			UserData:     g.UserData,
+			TaggedResourceRequest: cloudscale.TaggedResourceRequest{
+				Tags: &tagMap,
+			},
+		})
 
-			if err != nil {
-				errs[i] = fmt.Errorf("failed to create %s: %w", serverName, err)
-				return
-			}
+		if err != nil {
+			errs_mutext.Lock()
+			defer errs_mutext.Unlock()
+			errs = append(errs, 
+				fmt.Errorf("failed to create %s: %w", serverName, err))
+			return
+		}
 
-			server, err = g.client.Servers.WaitFor(
-				ctx, server.UUID, cloudscale.ServerIsRunning)
-
-			if err != nil {
-				errs[i] = fmt.Errorf(
-					"failed to wait for %s: %w", serverName, err)
-				return
-			}
-
-			g.log.Info("created server", "name", serverName, "uuid", server.UUID)
-			servers[i] = server
-		}()
+		// Send the uuid to the "wait" goroutine
+		servers <- server.UUID
 	}
-	// We wait for all previously started goroutines to complete before we exit
+	close(servers)
+	
+	// We wait for all previously started goroutines to complete before we return
 	wg.Wait()
-
 	return len(servers), errors.Join(errs...)
 }
 
@@ -354,7 +369,6 @@ func (g *InstanceGroup) Decrease(
 	ctx context.Context,
 	ids []string,
 ) (succeeded []string, err error) {
-
 	errs := make([]error, 0)
 
 	for _, id := range ids {
