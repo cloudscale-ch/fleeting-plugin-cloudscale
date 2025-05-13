@@ -14,6 +14,7 @@ import (
 	"path"
 	"regexp"
 	"strings"
+	"sync"
 
 	cloudscale "github.com/cloudscale-ch/cloudscale-go-sdk/v6"
 	hclog "github.com/hashicorp/go-hclog"
@@ -287,9 +288,6 @@ func (g *InstanceGroup) Increase(
 	ctx context.Context,
 	delta int,
 ) (succeeded int, err error) {
-	servers := make([]*cloudscale.Server, 0, delta)
-	errs := make([]error, 0)
-
 	publicKey, err := g.publicKey()
 	if err != nil {
 		return 0, err
@@ -297,6 +295,45 @@ func (g *InstanceGroup) Increase(
 
 	tagMap := g.tagMap()
 
+	// Channel for server uuids
+	servers := make(chan string)
+	var server_counter int // needed for returning the number of successfull instances
+	
+	var mutex sync.Mutex
+	errs := make([]error, delta)
+
+	// Await all servers being ready
+	var wg sync.WaitGroup
+	wg.Add(1)
+	go func(servers <-chan string) {
+		for uuid := range servers {
+			wg.Add(1)
+			go func(uuid string) {
+				defer wg.Done()
+				server, err := g.client.Servers.WaitFor(
+					ctx,
+					uuid,
+					cloudscale.ServerIsRunning,
+				)
+				if err != nil {
+					mutex.Lock()
+					defer mutex.Unlock()
+					errs = append(errs, 
+						fmt.Errorf("failed to wait for %s: %w", server.Name, err))
+					return
+				}
+
+				mutex.Lock()
+				defer mutex.Unlock()
+				server_counter += 1
+
+				g.log.Info("created server", "name", server.Name, "uuid", server.UUID)
+			}(uuid)
+		}
+		wg.Done()
+	}(servers)
+
+	// Create the servers
 	for i := 0; i < delta; i++ {
 		serverName := g.serverName()
 
@@ -315,26 +352,21 @@ func (g *InstanceGroup) Increase(
 		})
 
 		if err != nil {
-			errs = append(errs, fmt.Errorf(
-				"failed to create %s: %w", serverName, err))
+			mutex.Lock()
+			defer mutex.Unlock()
+			errs = append(errs, 
+				fmt.Errorf("failed to create %s: %w", serverName, err))
 			continue
 		}
 
-		server, err = g.client.Servers.WaitFor(
-			ctx, server.UUID, cloudscale.ServerIsRunning)
-
-		if err != nil {
-			errs = append(errs, fmt.Errorf(
-				"failed to wait for %s: %w", serverName, err))
-			continue
-		}
-
-		g.log.Info("created server", "name", serverName, "uuid", server.UUID)
-		servers = append(servers, server)
+		// Send the uuid to the "wait" goroutine
+		servers <- server.UUID
 	}
-
-	return len(servers), errors.Join(errs...)
-
+	close(servers)
+	
+	// We wait for all previously started goroutines to complete before we return
+	wg.Wait()
+	return server_counter, errors.Join(errs...)
 }
 
 // Decrease removes the specified instances from the instance group. It
@@ -343,7 +375,6 @@ func (g *InstanceGroup) Decrease(
 	ctx context.Context,
 	ids []string,
 ) (succeeded []string, err error) {
-
 	errs := make([]error, 0)
 
 	for _, id := range ids {
