@@ -11,6 +11,8 @@ on:
       - "go.*"
       - "**/*.go"
       - ".github/workflows/*.yml"
+    branches:
+      - "main"
 
 jobs:
   build:
