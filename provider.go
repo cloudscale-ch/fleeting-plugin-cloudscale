@@ -356,9 +356,7 @@ func (g *InstanceGroup) Increase(
 			SSHKeys:      []string{string(publicKey)},
 			VolumeSizeGB: g.VolumeSizeGB,
 			UserData:     g.UserData,
-			Interfaces:   &[]cloudscale.InterfaceRequest{
-								cloudscale.InterfaceRequest{Network: g.Network},
-							},
+			Interfaces:   &g.Interfaces,
 			TaggedResourceRequest: cloudscale.TaggedResourceRequest{
 				Tags: &tagMap,
 			},
