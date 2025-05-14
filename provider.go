@@ -307,7 +307,9 @@ func (g *InstanceGroup) Increase(
 
 	// Channel for server uuids
 	servers := make(chan string)
-	var server_counter int // needed for returning the number of successfull instances
+
+	// The number of successfully created instances
+	server_counter := 0
 
 	var mutex sync.Mutex
 	errs := make([]error, delta)
@@ -329,7 +331,8 @@ func (g *InstanceGroup) Increase(
 					mutex.Lock()
 					defer mutex.Unlock()
 					errs = append(errs,
-						fmt.Errorf("failed to wait for %s: %w", server.Name, err))
+						fmt.Errorf(
+							"failed to wait for %s: %w", server.Name, err))
 					return
 				}
 
@@ -337,7 +340,8 @@ func (g *InstanceGroup) Increase(
 				defer mutex.Unlock()
 				server_counter += 1
 
-				g.log.Info("created server", "name", server.Name, "uuid", server.UUID)
+				g.log.Info(
+					"created server", "name", server.Name, "uuid", server.UUID)
 			}(uuid)
 		}
 		wg.Done()
@@ -375,8 +379,9 @@ func (g *InstanceGroup) Increase(
 	}
 	close(servers)
 
-	// We wait for all previously started goroutines to complete before we return
+	// Wait for all previously started goroutines to complete before returning
 	wg.Wait()
+
 	return server_counter, errors.Join(errs...)
 }
 
