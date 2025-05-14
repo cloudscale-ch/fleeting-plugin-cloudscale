@@ -10,7 +10,6 @@ A [fleeting](https://docs.gitlab.com/runner/fleet_scaling/fleeting/) plugin for 
 
 ### Caveats
 
-- 🔒 Private networks are not yet supported.
 - ⬇️ Stopped runner instances are automatically removed and recycled.
 
 ## 🏎️ Demo and Ansible Playbook
@@ -141,6 +140,7 @@ The following parameters are supported:
 | `image`          | string | Image (slug) of virtual machine, [more information](https://www.cloudscale.ch/en/api/v1#images)                 |
 | `volume_size_gb` | number | The size of the root volume in GiB. Must be at least `10`.                                                      |
 | `user_data`      | string | Depending on the image choice is either in the format of cloud-init (YAML) or Ignition (JSON).                  |
+| `interfaces`     | object | Describes the interfaces to attach to the instances. Check the config template for some examples.               |
 
 ### Default connector config
 
