@@ -446,8 +446,6 @@ func (g *InstanceGroup) ConnectInfo(
 	}
 
 	info.Key = g.settings.Key
-
-	// Only public addresses are supported at the moment
 	info.ExternalAddr = server.Interfaces[0].Addresses[0].Address
 
 	return info, nil

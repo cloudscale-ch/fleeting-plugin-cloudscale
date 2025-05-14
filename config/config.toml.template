@@ -96,21 +96,29 @@ concurrent = 40
   # The root disk size of each instance.
   volume_size_gb = 25
 
-  # Networking configuration for the instances
-  # The Network that is listed first will be used for the communication with the runner controller.
-  # This direcly mirrors the go sdk types (https://github.com/cloudscale-ch/cloudscale-go-sdk/blob/1baae3ab99a83a25221c77a8c6f4c69838979312/servers.go#L116-L124)
+  # Networking configuration for the instances.
+  #
+  # The Network that is listed first will be used for the communication with
+  # the runner controller. This direcly mirrors the Go SDK types:
+  #
+  # https://github.com/cloudscale-ch/cloudscale-go-sdk/blob/1baae3ab99a83a25221c77a8c6f4c69838979312/servers.go#L116-L124
+  #
   # interfaces = [
   #   { network = "UUID3"},
   #   { network = "UUID3"},
   # ]
   #
   # Only one interface in the public network.
-  # This is also the default if nothing is set
+  # This is also the default if nothing is set.
+  #
   interfaces = [{ network = "public" }]
-  # Two interfaces, one in a private network
+  #
+  # Two interfaces, one in a private network (which will be used for
+  # communication with the runner controller).
+  #
   # interfaces = [
-  #   { network = "public" },
   #   { network = "uuid of private net"},
+  #   { network = "public" },
   # ]
 
   # The cloud-config applied to each instance. Note that GitLab expects these
