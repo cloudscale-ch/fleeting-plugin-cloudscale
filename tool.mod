@@ -8,7 +8,7 @@ tool (
 )
 
 require (
-	github.com/cloudscale-ch/cloudscale-go-sdk/v5 v5.1.0
+	github.com/cloudscale-ch/cloudscale-go-sdk/v6 v6.0.0
 	github.com/hashicorp/go-hclog v1.6.3
 	github.com/stretchr/testify v1.10.0
 	gitlab.com/gitlab-org/fleeting/fleeting v0.0.0-20250116074924-5d69933ca3b8
@@ -321,7 +321,7 @@ require (
 	golang.org/x/exp v0.0.0-20241009180824-f66d83c29e7c // indirect
 	golang.org/x/mod v0.24.0 // indirect
 	golang.org/x/net v0.37.0 // indirect
-	golang.org/x/oauth2 v0.28.0 // indirect
+	golang.org/x/oauth2 v0.29.0 // indirect
 	golang.org/x/sync v0.12.0 // indirect
 	golang.org/x/sys v0.31.0 // indirect
 	golang.org/x/term v0.30.0 // indirect
