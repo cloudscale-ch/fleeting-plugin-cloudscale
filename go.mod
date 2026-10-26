@@ -1,6 +1,6 @@
 module github.com/cloudscale-ch/fleeting-plugin-cloudscale
 
-go 1.24
+go 1.27.3
 
 require (
 	github.com/cloudscale-ch/cloudscale-go-sdk/v6 v6.0.0
