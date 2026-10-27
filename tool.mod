@@ -1,6 +1,6 @@
 module github.com/cloudscale-ch/fleeting-plugin-cloudscale
 
-go 1.24
+go 1.27.3
 
 tool (
 	github.com/goreleaser/goreleaser/v2
