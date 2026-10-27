@@ -15,7 +15,7 @@ on:
       - "main"
 
 jobs:
-  validate-workfows:
+  validate-workflows:
     name: Validate GitHub Workflows
     runs-on: ubuntu-latest
 
