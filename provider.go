@@ -332,7 +332,7 @@ func (g *InstanceGroup) Increase(
 					defer mutex.Unlock()
 					errs = append(errs,
 						fmt.Errorf(
-							"failed to wait for %s: %w", server.Name, err))
+							"failed to wait for %s: %w", uuid, err))
 					return
 				}
 
